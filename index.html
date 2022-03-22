@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset=utf-8 />
+<title>Perceptual Circle Scaling</title>
+<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+
+<style>
+  body {
+    margin:0;
+    padding:0;
+    font-family:sans-serif;
+    }
+
+  h1 {
+    position: absolute;
+    left: 50px;
+    top: 10px;
+    padding: 8px 2%;
+    margin: 0;
+    background: rgba(5, 107, 31, 0.8);
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    border-radius: 3px;
+    color: whitesmoke;
+    font-size: 1.5em;
+    z-index: 800;
+    }
+
+  #map {
+    position:absolute;
+    top:0;
+    bottom:0;
+    width:100%;
+    height: 100%;
+   }
+   .info
+ {
+       padding: 6px 8px;
+       font: 12px/16px Verdana, Geneva, sans-serif;
+       background: white;
+       background: rgba(255,255,255,1);
+       box-shadow: 0 0 15px rgba(0,0,0,0.2);
+       border-radius: 3px;
+   }
+
+  .legend {
+       line-height: 45px;
+       padding:1px;
+       color: #555;
+      }
+
+  .legend i {
+       width: 15px;
+       height: 15px;
+       float: left;
+       margin-right: 7px;
+       opacity: 0.7;
+     }
+
+   .circle {
+ float: left;
+ border: 1px solid #222;
+ border-radius: 50%;
+ }
+
+ .legend .colorcircle {
+ border-radius: 50%;
+ width: 15px;
+ height: 15px;
+ margin-top: 0px;
+ }
+ .legend .circlepadding {
+ border-radius: 50%;
+ background: rgba(255, 255, 255, 0.85);
+ }
+#text {
+    position: absolute;
+    top: 55%;
+    left: 10px;
+    padding: 8px 2%;
+    margin: 0;
+    background: rgba(5, 107, 31, 0.8);
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    border-radius: 3px;
+    color: white;
+    width: 18%;
+    font-size: 0.8em;
+    z-index: 800;
+  }
+</style>
+</head>
+
+<body>
+  <div id='text'>
+    <h2>Median Rates of Rent in Each State</h2>
+    <p>Each state has a different median amount of rent for a residence. Rent is influenced by population density, supply and demand, and location within each state.</p>
+    <p>When you click on a circle, you are given the median dollar amount of rent in that state</p>
+<br><br>
+    </div>
+
+  <div id='map'></div>
+    <h1>United States Median Rent Estimates, 2015-2019</h1>
+
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-ajax/2.1.0/leaflet.ajax.min.js"></script>
+
+<script>
+  console.log("hello world!");
+    var map = L.map('map', {
+      center: [39.5, -95.3],
+      zoom: 4
+    });
+
+    var Stadia_OSMBright = L.tileLayer('https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}{r}.png', {
+	maxZoom: 20,
+	attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    states = L.geoJson.ajax("assets/rentdata.geojson",{
+      attribution: 'Data: US Census Bureau, Map: Casey Mahler',
+      onEachFeature: function (feature, layer) {
+         layer.bindPopup(feature.properties.name + "<BR>" + feature.properties.estimate);
+     },
+      pointToLayer: function (feature, x){
+        return L.circleMarker(x, {
+          color: 'green',
+          opacity: 1,
+          weight: 2,
+          fillColor: 'green',
+          fillOpacity: .6,
+          radius: calcRadius(feature.properties.estimate)
+        }).on({
+                mouseover: function(e){
+                  this.setStyle({color: 'green',fillColor: 'yellow'});
+                                      },
+                mouseout: function(e){
+                  this.setStyle({color:'green', fillColor: 'green'});
+                } })},});
+    var minValue = 725;
+    var minRadius = 10;
+
+    function calcRadius(val) {
+            return 1.00 * Math.pow(val/minValue,.5) * minRadius;
+            }
+    states.addTo(map);
+    L.control.scale({position: 'bottomleft'}).addTo(map);
+
+    function getRadius(r) {
+    return  r > 1600 ? 46 :
+           r > 1100 ? 35 :
+           r > 725 ? 25 :
+           0;
+    }
+
+    var legend = L.control({position: 'bottomright'});
+    legend.onAdd = function (map) {
+
+    var div = L.DomUtil.create('div', 'info legend');
+    grades = [500, 750, 1100],
+    labels = ['<strong>Rates of Rent</strong>'],
+    categories = ['750','1100','1600'];
+
+    for (var i = 0; i < grades.length; i++) {
+       var grade = grades[i];//*0.5;
+  labels.push(
+       '<i class="circlepadding" style="width: '+Math.max(8,(7-2.2*getRadius(grade)))+'px;"></i> <i style="background: #8080A0; width: '+getRadius(grade)*2+'px; height: '+getRadius(grade)*2+'px; border-radius: 50%; margin-top: '+Math.max(0,(9-getRadius(grade)))+'px;"></i><i class="circlepadding" style="width: '+Math.max(2,(25-2*getRadius(grade)))+'px;"></i> ' + categories[i]);
+  }
+ div.innerHTML = labels.join('<br>');
+return div;
+};
+legend.addTo(map);
+
+</script>
+</body>
+</html>
